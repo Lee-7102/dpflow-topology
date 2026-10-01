@@ -1,5 +1,5 @@
 autoflow: /path/to/autoflow
-flying_chairs: /path/to/FlyingChairs_release
+flying_chairs: /fs/nexus-scratch/liyiqian/datasets/FlyingChairs/FlyingChairs_release
 flying_chairs2: /path/to/FlyingChairs2
 flying_things3d: /path/to/FlyingThings3D
 flying_things3d_subset: /path/to/FlyingThings3D_subset

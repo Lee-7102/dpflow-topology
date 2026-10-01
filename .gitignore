@@ -133,3 +133,22 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+#log from cluster
+logs/
+
+*.ckpt
+*.pth
+*.pt
+
+# Slurm
+slurm-*.out
+slurm-*.err
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
