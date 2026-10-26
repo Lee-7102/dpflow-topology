@@ -24,11 +24,11 @@ from .norm import LayerNorm2d
 
 class FlowHead(nn.Module):
     def __init__(
-        self, input_dim=128, hidden_dim=256, activation_function=None, info_pred=False
+        self, input_dim=128, hidden_dim=256, output_dim=2,activation_function=None, info_pred=False
     ):
         super(FlowHead, self).__init__()
         self.conv1 = Conv2dBlock(input_dim, hidden_dim, 3, padding=1)
-        out_ch = 6 if info_pred else 2
+        out_ch = output_dim + (4 if info_pred else 0)
         self.conv2 = Conv2dBlock(hidden_dim, out_ch, 3, padding=1)
 
         act = nn.ReLU if activation_function is None else activation_function
@@ -238,6 +238,7 @@ class UpdateBlock(nn.Module):
         loss: str,
         use_upsample_mask: bool,
         upmask_gradient_scale: float,
+        latent_dim: int,
     ):
         super(UpdateBlock, self).__init__()
         self.use_upsample_mask = use_upsample_mask
@@ -279,6 +280,7 @@ class UpdateBlock(nn.Module):
             hidden_dim=dec_flow_head_chs,
             activation_function=activation_function,
             info_pred=(loss == "laplace"),
+            output_dim=latent_dim
         )
 
         if use_upsample_mask:
@@ -297,10 +299,11 @@ class UpdateBlock(nn.Module):
         for gru in self.gru_list:
             net = gru(net, inp)
 
-        delta_flow = self.flow_head(net)
+        # delta_flow = self.flow_head(net)
+        latent = self.flow_head(net)
 
         mask = None
         if self.use_upsample_mask:
             mask = self.upmask_gradient_scale * self.mask(net)
 
-        return delta_flow, net, mask
+        return latent, net, mask

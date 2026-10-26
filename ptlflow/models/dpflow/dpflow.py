@@ -41,6 +41,9 @@ except:
     alt_cuda_corr = None
 
 
+from .geometry import build_geometry
+
+
 class SequenceLoss(nn.Module):
     def __init__(self, loss: str, max_flow: float, gamma: float):
         super().__init__()
@@ -147,6 +150,9 @@ class DPFlow(BaseModel):
         use_var: bool = True,
         var_min: float = 0.0,
         var_max: float = 10.0,
+        flow_geometry="euclidean",
+        flow_update_mode="residual",
+        geometry_radius=4.0,
         **kwargs,
     ):
         if pyramid_levels is not None:
@@ -177,6 +183,13 @@ class DPFlow(BaseModel):
         self.use_var = use_var
         self.var_min = var_min
         self.var_max = var_max
+        self.flow_geometry_name = flow_geometry
+        self.flow_update_mode = flow_update_mode
+
+        self.flow_geometry = build_geometry(
+            flow_geometry,
+            geometry_radius,
+        )
 
         activation_function = get_activation(activation_function)
 
@@ -270,6 +283,7 @@ class DPFlow(BaseModel):
             loss=loss,
             use_upsample_mask=use_upsample_mask,
             upmask_gradient_scale=upmask_gradient_scale,
+            latent_dim=self.flow_geometry.latent_dim,
         )
 
         act = nn.ReLU if activation_function is None else activation_function
@@ -507,14 +521,42 @@ class DPFlow(BaseModel):
                 # correlation
                 out_corr = corr_fn(coords0 + flow)
 
-                flow_res, net, mask = self.update_block(net, inp, out_corr, flow)
+                output, net, mask = self.update_block(net, inp, out_corr, flow)
+                latent_dim = self.flow_geometry.latent_dim
 
                 info = None
                 if self.loss == "laplace":
-                    info = flow_res[:, 2:]
-                    flow_res = flow_res[:, :2]
+                    latent = output[:, :latent_dim]
+                    info = output[:, latent_dim:]
+                else:
+                    latent = output
 
-                flow = flow + flow_res
+                latent = self.flow_geometry.project(latent)
+                flow_pred = self.flow_geometry.decode(latent)
+
+                # Diagnostic: decoded flow/residual magnitude
+                # with torch.no_grad():
+                #     flow_mag = torch.linalg.vector_norm(flow_pred, dim=1)
+
+                #     print(
+                #         f"level={l} iter={it} decoded residual:",
+                #         "mean", flow_mag.mean().item(),
+                #         "p95", torch.quantile(flow_mag.flatten(), 0.95).item(),
+                #         "p99", torch.quantile(flow_mag.flatten(), 0.99).item(),
+                #         "max", flow_mag.max().item(),
+                #     )
+
+                if self.flow_update_mode == "residual":
+                    flow = flow + flow_pred
+
+                elif self.flow_update_mode == "absolute":
+                    flow = flow_pred
+
+                else:
+                    raise ValueError(
+                        f"Unknown flow_update_mode: "
+                        f"{self.flow_update_mode}"
+                    )
 
                 if self.training or (
                     l == len(x1_pyramid) - 1 and it == self.iters_per_level - 1

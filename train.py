@@ -173,6 +173,8 @@ def cli_main():
 
     if not cli.model.has_trained_on_ptlflow:
         _print_untested_warning()
+    total_params = sum(p.numel() for p in cli.model.parameters())
+    print(f"Model parameters: {total_params / 1e6:.2f} M")
 
     cli.trainer.fit(cli.model, datamodule=cli.datamodule, ckpt_path=cfg.ckpt_path)
 

@@ -25,5 +25,5 @@ echo "Node: $(hostname)"
 echo "Python: $(which python)"
 echo "======================================"
 
-python train.py --config ptlflow/models/dpflow/configs/dpflow-train1-chairs.yaml \
+python train.py --config ptlflow/models/dpflow/configs/dpflow-train1-chairs_torus.yaml \
                 --trainer.devices 1 

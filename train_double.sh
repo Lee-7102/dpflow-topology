@@ -11,7 +11,7 @@
 
 #SBATCH --gres=gpu:rtxa6000:2
 #SBATCH --mem=64G
-#SBATCH --time=2-00:00:00
+#SBATCH --time=1-00:00:00
 
 #SBATCH --output=logs/dpflow_2xa6000_%j.out
 #SBATCH --error=logs/dpflow_2xa6000_%j.err
@@ -52,7 +52,7 @@ echo "Starting DPFlow training"
 echo "========================================"
 
 srun python train.py \
-    --config ptlflow/models/dpflow/configs/dpflow-train1-chairs.yaml \
+    --config ptlflow/models/dpflow/configs/dpflow-train1-chairs-tiny-torus.yaml \
     --trainer.devices 2 \
     --trainer.num_nodes 1 \
     --trainer.strategy ddp \
